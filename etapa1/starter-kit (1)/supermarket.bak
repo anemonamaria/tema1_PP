@@ -47,17 +47,7 @@
 ; - tt-ul acesteia
 ; Obs: când mai multe case au același tt, este preferată casa cu indexul cel mai mic
 (define (min-tt counters)
-  (aux-min-tt (first (cdr counters)) (counter-index (first counters) counter-tt (first counters)) ))
-
-(define (aux-min-tt C (index-min  tt-min))
-  (cond
-    ((< (counter-tt C) tt-min) ((counter-index C) . (counter-tt C))
-    ((> (counter-tt C) tt-min) (index-min . tt-min))
-    (else (cond
-           ((< (counter-index C) index-min) ((counter-index C) . (counter-tt C))
-           ((> (counter-index C) index-min) (index-min . tt-min))
-           (else (index-min . tt-min))))))))
-    
+  'your-code-here)
 
 
 ; TODO
