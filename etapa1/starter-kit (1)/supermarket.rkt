@@ -47,17 +47,12 @@
 ; - tt-ul acesteia
 ; Obs: când mai multe case au același tt, este preferată casa cu indexul cel mai mic
 (define (min-tt counters)
-  (aux-min-tt (first (cdr counters)) (counter-index (first counters) counter-tt (first counters)) ))
+  (aux-min-tt 999999999999 999999999999 counters))
 
-(define (aux-min-tt C (index-min  tt-min))
-  (cond
-    ((< (counter-tt C) tt-min) ((counter-index C) . (counter-tt C))
-    ((> (counter-tt C) tt-min) (index-min . tt-min))
-    (else (cond
-           ((< (counter-index C) index-min) ((counter-index C) . (counter-tt C))
-           ((> (counter-index C) index-min) (index-min . tt-min))
-           (else (index-min . tt-min))))))))
-    
+(define (aux-min-tt index-min tt-min list-count)
+  (cond ((null? list-count) (cons index-min tt-min))
+      ((< (counter-tt (car list-count)) tt-min) (aux-min-tt (counter-index (car list-count)) (counter-tt (car list-count)) (cdr list-count)))
+      ((>= (counter-tt (car list-count)) tt-min) (aux-min-tt index-min tt-min (cdr list-count)))))
 
 
 ; TODO
@@ -66,7 +61,7 @@
 ; Veți întoarce o nouă structură obținută prin așezarea perechii (name . n-items)
 ; la sfârșitul cozii de așteptare.
 (define (add-to-counter C name n-items)
-  'your-code-here)
+  (make-counter (counter-index C) (+ (counter-tt C) n-items) (append (counter-queue C) (list (cons name n-items)))))
 
 
 ; TODO
