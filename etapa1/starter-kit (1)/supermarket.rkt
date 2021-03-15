@@ -61,7 +61,7 @@
 ; Veți întoarce o nouă structură obținută prin așezarea perechii (name . n-items)
 ; la sfârșitul cozii de așteptare.
 (define (add-to-counter C name n-items)
-  (make-counter (counter-index C) (+ (counter-tt C) n-items) (append (counter-queue C) (list (cons name n-items)))))
+  (struct-copy counter C [index (counter-index C)] [tt (+ (counter-tt C) n-items)] [queue (append (counter-queue C) (list (cons name n-items)))]))
 
 
 ; TODO
@@ -83,5 +83,18 @@
   (if (null? requests)
       (list C1 C2 C3 C4)
       (match (car requests)
-        [(list 'delay index minutes) 'your-code-here]
-        [(list name n-items)         'your-code-here])))
+        [(list 'delay index minutes) (cond
+                                       ((equal? (counter-index C1) index) (serve (cdr requests) (tt+ C1 minutes) C2 C3 C4))
+                                       ((equal? (counter-index C2) index) (serve (cdr requests) C1 (tt+ C2 minutes) C3 C4))
+                                       ((equal? (counter-index C3) index) (serve (cdr requests) C1 C2 (tt+ C3 minutes) C4))
+                                       ((equal? (counter-index C4) index) (serve (cdr requests) C1 C2 C3 (tt+ C4 minutes))))]
+        [(list name n-items)         (cond
+                                       ((<= n-items ITEMS) (cond
+                                                             ((= (car (min-tt (list C1 C2 C3 C4))) (counter-index C1)) (serve (cdr requests) (add-to-counter C1 name n-items) C2 C3 C4))
+                                                             ((= (car (min-tt (list C1 C2 C3 C4))) (counter-index C2)) (serve (cdr requests) C1 (add-to-counter C2 name n-items) C3 C4))
+                                                             ((= (car (min-tt (list C1 C2 C3 C4))) (counter-index C3)) (serve (cdr requests) C1 C2 (add-to-counter C3 name n-items) C4))
+                                                             (else (serve (cdr requests) C1 C2 C3 (add-to-counter C4 name n-items)))))
+                                       (else (cond
+                                                             ((= (car (min-tt (list C2 C3 C4))) (counter-index C2)) (serve (cdr requests) C1 (add-to-counter C2 name n-items) C3 C4))
+                                                             ((= (car (min-tt (list C2 C3 C4))) (counter-index C3)) (serve (cdr requests) C1 C2 (add-to-counter C3 name n-items) C4))
+                                                             (else (serve (cdr requests) C1 C2 C3 (add-to-counter C4 name n-items))))))])))
