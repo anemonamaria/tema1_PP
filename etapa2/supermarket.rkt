@@ -47,24 +47,22 @@
 ; cum este cel mai bine ca tt+ să își primească parametrii.
 ; Din acest motiv checker-ul nu testează separat această funcție, dar asistentul va verifica
 ; faptul că ați implementat-o conform cerințelor.
-(define tt+
-  (lambda (C)
-    (lambda (minutes)
-      (match C
-        [(counter index tt et queue)
-         (struct-copy counter C [index index] [tt (+ tt minutes)] [et et] [queue queue])]))))
+(define (tt+ minutes)
+  (lambda (C) 
+    (match C
+      [(counter index tt et queue)
+       (struct-copy counter C [index index] [tt (+ tt minutes)] [et et] [queue queue])])))
 
 
 ; TODO
 ; Implementați o funcție care crește et-ul unei case cu un număr dat de minute.
 ; Păstrați formatul folosit pentru tt+.
 ; Checker-ul nu testează separat această funcție.
-(define et+
+(define (et+ minutes)
   (lambda (C)
-    (lambda (minutes)
-      (match C
-        [(counter index tt et queue)
-         (struct-copy counter C [index index] [tt tt] [et (+ et minutes)] [queue queue])]))))
+    (match C
+      [(counter index tt et queue)
+       (struct-copy counter C [index index] [tt tt] [et (+ et minutes)] [queue queue])])))
 
 
 ; TODO
@@ -86,27 +84,23 @@
 ; - indexul casei (din listă) care are cel mai mic et
 ; - et-ul acesteia
 ; (când mai multe case au același et, este preferată casa cu indexul cel mai mic)
-(define general-func
-  'your-code-here);(lambda (counters)
-  ;  (lambda (tt-et)
-   ;   (more-general-func 999999999999 999999999999 tt-et counters))))
+(define (general-func g f max-index tt-et-max counters)
+  (cond ((null? counters) (cons max-index tt-et-max))
+        ((equal? (g  (f counters) tt-et-max) #t) (general-func g f (counter-index (car counters)) (f counters) (cdr counters)))
+        (else (general-func g f max-index tt-et-max (cdr counters)))))
 
-;(define (more-general-func index-min tt-et-min counters)
-  ;(cond ((null? counters) (cons index-min tt-et-min))
-   ;     (match (car counters)
-    ;;      [(counter index tt et queue)
+(define (give-me-tt counters)
+  (counter-tt (car counters)))
 
-(define min-tt 'your-code-here) ; folosind funcția de mai sus
-(define min-et 'your-code-here) ; folosind funcția de mai sus
+(define (give-me-et counters)
+  (counter-et (car counters)))
+
+(define (min-tt counters)
+  (general-func < give-me-tt 999999999999 999999999999 counters)) ; folosind funcția de mai sus
+(define (min-et counters)
+  (general-func < give-me-et 999999999999 999999999999 counters)); folosind funcția de mai sus
 
 
-;(define (min-tt counters)
- ; (aux-min-tt 999999999999 999999999999 counters))
-
-;(define (aux-min-tt index-min tt-min list-count)
- ; (cond ((null? list-count) (cons index-min tt-min))
-  ;    ((< (counter-tt (car list-count)) tt-min) (aux-min-tt (counter-index (car list-count)) (counter-tt (car list-count)) (cdr list-count)))
-   ;   ((>= (counter-tt (car list-count)) tt-min) (aux-min-tt index-min tt-min (cdr list-count)))))
 
 
 ; TODO
@@ -123,7 +117,7 @@
    (if (null? costumers)
        0
        (+ (cdr (car costumers)) (total-time (cdr costumers)))))
-  ;(struct-copy counter C [index (counter-index C)] [tt (- (counter-tt C) (cdr (car (counter-queue C))))] [et (cdr (car (cdr (counter-queue C))))] [queue (cdr (counter-queue C))]))
+ 
     
 
 ; TODO
