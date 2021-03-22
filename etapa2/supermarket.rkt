@@ -152,5 +152,31 @@
 
   (if (null? requests)
       (append fast-counters slow-counters)
-      'your-matches-here))
+      (match (car requests)
+      [(list name n-items)  (cond
+                              ((<= n-items ITEMS) (serve (cdr requests) (update (add-to-counter (find-counter fast-counters (car (min-tt fast-counters))) name n-items) fast-counters (car (min-tt fast-counters))) slow-counters))
+                              (else (serve (cdr requests) fast-counters (update (add-to-counter (find-counter slow-counters (car (min-tt slow-counters))) name n-items) slow-counters (car (min-tt slow-counters))))))]
+      [(list 'delay index minutes)  (cond
+                                       ((null? (find-counter fast-counters index)) (serve (cdr requests) fast-counters (update (increase-tt-et minutes (find-counter slow-counters index)) slow-counters index)))
+                                       (else (serve (cdr requests) (update (increase-tt-et minutes (find-counter fast-counters index)) fast-counters index) slow-counters)))]
+      [(list 'remove-first)  (cond
+                                ((< (cadr (min-et fast-counters)) (cadr (min-et slow-counters))) (serve (cdr requests) (update (remove-first-from-counter (find-counter fast-counters (car (min-et fast-counters)))) fast-counters (car (min-et fast-counters))) slow-counters))
+                                (else (serve (cdr requests) fast-counters (update (remove-first-from-counter (find-counter slow-counters (car (min-et slow-counters)))) slow-counters (car (min-et slow-counters))))))]
+      [(list 'ensure average) (cond
+                                ((> (/ (calculate-all-tt (append fast-counters slow-counters)) (length (append fast-counters slow-counters))) average) (serve (cdr requests) fast-counters (append slow-counters (empty-counter (+ (length (append fast-counters slow-counters)) 1)))))
+                                (else (serve (cdr requests) fast-counters slow-counters)))])))
 
+ (define (find-counter counters index)
+   (cond ((null? counters) null)
+         ((= (counter-index (car counters)) index) (car counters))
+         (else (find-counter (cdr counters) index))))
+
+ (define (increase-tt-et minutes C)
+   (match C
+      [(counter index tt et queue)
+       (struct-copy counter C [index index] [tt (+ tt minutes)] [et (+ et minutes)] [queue queue])]))
+
+ (define (calculate-all-tt counters)
+   (cond ((null? counters) 0)
+         (+ (calculate-all-tt (cdr counters)) (counter-tt (car counters)))))
+         
