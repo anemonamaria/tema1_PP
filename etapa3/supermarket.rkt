@@ -33,30 +33,65 @@
 ; - top
 ; Obs: Doar câteva funcții vor necesita actualizări.
 (define (empty-counter index)           ; testată de checker
-  'your-code-here)
+  (make-counter index 0 0 empty-queue))
 
 (define (update f counters index)
-  'your-code-here)
+  (if (null? counters) counters
+      (cond
+        ((equal? (counter-index (car counters)) index) (cons (f (car counters)) (cdr counters)))
+        (else (cons (car counters) (update f (cdr counters) index))))))
 
-(define tt+
-  'your-code-here)
+(define (tt+ minutes)
+  (lambda (C) 
+    (match C
+      [(counter index tt et queue)
+       (struct-copy counter C [index index] [tt (+ tt minutes)] [et et] [queue queue])])))
 
-(define et+
-  'your-code-here)
+(define (et+ minutes)
+  (lambda (C)
+    (match C
+      [(counter index tt et queue)
+       (struct-copy counter C [index index] [tt tt] [et (+ et minutes)] [queue queue])])))
 
 (define (add-to-counter name items)     ; testată de checker
   (λ (C)                                ; nu modificați felul în care funcția își primește argumentele
-    'your-code-here))
+    (struct-copy counter C [index (counter-index C)]
+                           [tt (+ (counter-tt C) items)]
+                           [et (cond
+                                  ((queue-empty? (counter-queue C)) (+ (counter-et C) items))
+                                  (else (counter-et C)))]
+                           [queue (enqueue (cons name items) (counter-queue C))])))
 
-(define functie-mai-abstracta-careia-ii-veti-da-un-nume-sugestiv
-  'your-code-here)
-(define min-tt 'your-code-here)
-(define min-et 'your-code-here)
+(define (general-func g f max-index tt-et-max counters)
+  (cond ((null? counters) (cons max-index tt-et-max))
+        ((equal? (g  (f counters) tt-et-max) #t) (general-func g f (counter-index (car counters)) (f counters) (cdr counters)))
+        (else (general-func g f max-index tt-et-max (cdr counters)))))
+
+(define (give-me-tt counters)
+  (counter-tt (car counters)))
+
+(define (give-me-et counters)
+  (counter-et (car counters)))
+
+(define (min-tt counters)
+  (general-func < give-me-tt 999999999999 999999999999 counters))
+(define (min-et counters)
+  (general-func < give-me-et 999999999999 999999999999 counters))
 
 (define (remove-first-from-counter C)   ; testată de checker
-  'your-code-here)
-
-
+;'your-code-here)
+  (if (queue-empty? (counter-queue C))
+      (struct-copy counter C [index (counter-index C)] [tt 0] [et 0] [queue null]) 
+      (struct-copy counter C [index (counter-index C)]
+                             [tt (total-time (dequeue (counter-queue C)))]
+                             [et (cond
+                                   ((queue-empty? (dequeue (counter-queue C))) 0)
+                                   (else (cdr (top (dequeue (counter-queue C)))))) ] ; (cdr (car (cdr (counter-queue C))))
+                             [queue (dequeue (counter-queue C))])))
+(define (total-time queue)
+   (if (queue-empty? queue)
+       0
+       (+ (cdr (top queue)) (total-time (dequeue queue)))))
 ; TODO
 ; Implementați o funcție care calculează starea unei case după un număr dat de minute.
 ; Funcția presupune, fără să verifice, că în acest timp nu a ieșit nimeni din coadă, 
@@ -66,7 +101,14 @@
 ; Atenție: casele fără clienți nu trebuie să ajungă la timpi negativi!
 (define (pass-time-through-counter minutes)
   (λ (C)
-    'your-code-here))
+    (struct-copy counter C [index (counter-index C)]
+                           [tt (cond
+                                 ((>= (- (counter-tt C) minutes) 0) (- (counter-tt C) minutes))
+                                 (else 0))]
+                           [et (cond
+                                 ((>= (- (counter-et C) minutes) 0) (- (counter-et C) minutes))
+                                 (else 0))]
+                           [queue (counter-queue C)])))
   
 
 ; TODO
@@ -99,5 +141,52 @@
 ; Obs: Pentru a contoriza ieșirile din cozi, puteți să lucrați într-o funcție ajutătoare
 ; (cu un parametru în plus față de funcția serve), pe care serve doar o apelează.
 (define (serve requests fast-counters slow-counters)
-  'your-code-here)
-        
+  (if (null? requests)
+      (append fast-counters slow-counters)
+      (match (car requests)
+        [(list 'ensure average) (cond
+                                  ((> (/ (calculate-all-tt (append fast-counters slow-counters)) (length (append fast-counters slow-counters))) average)
+                                   (serve requests fast-counters (append slow-counters (list (empty-counter (+ (length (append fast-counters slow-counters)) 1))))))
+                                  (else (serve (cdr requests) fast-counters slow-counters)))]
+
+        [(list name n-items)  (cond 
+                              ((<= n-items ITEMS) (cond
+                                                    ((<= (cdr (min-tt fast-counters)) (cdr (min-tt slow-counters)))
+                                                     (serve (cdr requests) (update (add-to-counter name n-items) fast-counters (car (min-tt fast-counters))) slow-counters))
+                                                    (else (serve (cdr requests) fast-counters (update (add-to-counter name n-items) slow-counters (car (min-tt slow-counters)))))))
+                              (else (serve (cdr requests) fast-counters (update (add-to-counter name n-items) slow-counters (car (min-tt slow-counters))))))]
+      [(list 'delay index minutes)  (cond
+                                       ((null? (find-counter fast-counters index))
+                                        (serve (cdr requests) fast-counters (update (increase-tt-et minutes) slow-counters index)))
+                                       (else (serve (cdr requests) (update (increase-tt-et minutes) fast-counters index) slow-counters)))])))
+
+(define (find-counter counters index)
+   (cond ((null? counters) null)
+         ((= (counter-index (car counters)) index) (car counters))
+         (else (find-counter (cdr counters) index))))
+
+(define (increase-tt-et minutes)
+   (lambda (C)
+     (match C
+       [(counter index tt et queue)
+       (struct-copy counter C [index index] [tt (+ tt minutes)] [et (+ et minutes)] [queue queue])])))
+
+(define (calculate-all-tt counters)
+   (if (null? counters) 0
+         (+ (counter-tt (car counters)) (calculate-all-tt (cdr counters)))))
+
+(define C1 (empty-counter 1))
+(define C2 (empty-counter 2))
+(define C3 (empty-counter 3))
+(define C4 (empty-counter 4))
+(define C5 (make-counter 5 12 8 (queue '((remus . 6) (vivi . 4)) '() 2 0)))
+
+
+(serve '(2 (ana 14) 6)
+                     (list C1)
+                     (list C2 C3))
+(list
+                                    '()
+                                    (counter 1 0 0 (queue '() '() 0 0))
+                                    (counter 2 8 8 (queue '() '((ana . 14)) 0 1))
+                                    (counter 3 0 0 (queue '() '() 0 0)))
