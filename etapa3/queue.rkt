@@ -72,18 +72,21 @@
 ; (nu verificați că e nevidă, pe coada vidă este firesc să dea eroare).
 ; Veți întoarce coada actualizată.
 (define (dequeue q)
-  (struct-copy queue q [left (cond
-                               ((null? (queue-left q)) (cdr (rev (queue-right q))))
-                               (else (cdr (queue-left q))))]
-                       [right (cond
-                                  ((null? (queue-left q)) null)
-                                  (else (queue-right q)))]
-                       [size-l (length (cond
-                                           ((null? (queue-left q)) (cdr (rev (queue-right q))))
-                                           (else (cdr (queue-left q)))))]
-                       [size-r (cond
-                                   ((null? (queue-left q)) 0)
-                                   (else (queue-size-r q)))]))
+  (cond
+    ((not (null? (queue-left q))) (make-queue (cdr (queue-left q)) (queue-right q) (- (queue-size-l q) 1) (queue-size-r q)))
+    ((not (null? (queue-right q))) (make-queue (cdr (reverse (queue-right q))) '() (- (queue-size-r q) 1) 0))))
+  ;(struct-copy queue q [left (cond
+      ;                         ((null? (queue-left q)) (cdr (rev (queue-right q))))
+   ;                            (else (cdr (queue-left q))))]
+    ;                   [right (cond
+     ;                             ((null? (queue-left q)) null)
+       ;                           (else (queue-right q)))]
+        ;               [size-l (length (cond
+         ;                                  ((null? (queue-left q)) (cdr (rev (queue-right q))))
+          ;                                 (else (cdr (queue-left q)))))]
+           ;            [size-r (cond
+            ;                       ((null? (queue-left q)) 0)
+             ;                      (else (queue-size-r q)))]))
 
 (define (rev L)
   (if (null? L)
@@ -96,5 +99,5 @@
 ; Veți întoarce elementul aflat la începutul cozii.
 (define (top q)
   (cond
-    ((null? (queue-left q)) (car (rev (queue-right q))))
-    (else (car (queue-left q)))))
+    ((and (null? (queue-left q)) (not (null? (queue-right q)))) (car (rev (queue-right q))))
+    ((not (null? (queue-left q))) (car (queue-left q)))))

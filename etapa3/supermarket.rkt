@@ -79,7 +79,6 @@
   (general-func < give-me-et 999999999999 999999999999 counters))
 
 (define (remove-first-from-counter C)   ; testată de checker
-;'your-code-here)
   (if (queue-empty? (counter-queue C))
       (struct-copy counter C [index (counter-index C)] [tt 0] [et 0] [queue null]) 
       (struct-copy counter C [index (counter-index C)]
@@ -103,7 +102,7 @@
   (λ (C)
     (struct-copy counter C [index (counter-index C)]
                            [tt (cond
-                                 ((>= (- (counter-tt C) minutes) 0) (- (counter-tt C) minutes))
+                                 ((>=  (- (counter-tt C) minutes) 0) (- (counter-tt C) minutes))
                                  (else 0))]
                            [et (cond
                                  ((>= (- (counter-et C) minutes) 0) (- (counter-et C) minutes))
@@ -141,25 +140,64 @@
 ; Obs: Pentru a contoriza ieșirile din cozi, puteți să lucrați într-o funcție ajutătoare
 ; (cu un parametru în plus față de funcția serve), pe care serve doar o apelează.
 (define (serve requests fast-counters slow-counters)
+  (advanced-serve '() requests fast-counters slow-counters))
+
+(define (advanced-serve out-customers requests fast-counters slow-counters) 
   (if (null? requests)
-      (append fast-counters slow-counters)
+      (cons out-customers (append fast-counters slow-counters))
       (match (car requests)
         [(list 'ensure average) (cond
                                   ((> (/ (calculate-all-tt (append fast-counters slow-counters)) (length (append fast-counters slow-counters))) average)
-                                   (serve requests fast-counters (append slow-counters (list (empty-counter (+ (length (append fast-counters slow-counters)) 1))))))
-                                  (else (serve (cdr requests) fast-counters slow-counters)))]
+                                   (advanced-serve out-customers requests fast-counters (append slow-counters (list (empty-counter (+ (length (append fast-counters slow-counters)) 1))))))
+                                  (else (advanced-serve out-customers (cdr requests) fast-counters slow-counters)))]
 
         [(list name n-items)  (cond 
                               ((<= n-items ITEMS) (cond
                                                     ((<= (cdr (min-tt fast-counters)) (cdr (min-tt slow-counters)))
-                                                     (serve (cdr requests) (update (add-to-counter name n-items) fast-counters (car (min-tt fast-counters))) slow-counters))
-                                                    (else (serve (cdr requests) fast-counters (update (add-to-counter name n-items) slow-counters (car (min-tt slow-counters)))))))
-                              (else (serve (cdr requests) fast-counters (update (add-to-counter name n-items) slow-counters (car (min-tt slow-counters))))))]
-      [(list 'delay index minutes)  (cond
+                                                     (advanced-serve out-customers (cdr requests) (update (add-to-counter name n-items) fast-counters (car (min-tt fast-counters))) slow-counters))
+                                                    (else (advanced-serve out-customers (cdr requests) fast-counters (update (add-to-counter name n-items) slow-counters (car (min-tt slow-counters)))))))
+                              (else (advanced-serve out-customers (cdr requests) fast-counters (update (add-to-counter name n-items) slow-counters (car (min-tt slow-counters))))))]
+        [(list 'delay index minutes)  (cond
                                        ((null? (find-counter fast-counters index))
-                                        (serve (cdr requests) fast-counters (update (increase-tt-et minutes) slow-counters index)))
-                                       (else (serve (cdr requests) (update (increase-tt-et minutes) fast-counters index) slow-counters)))])))
+                                        (advanced-serve out-customers (cdr requests) fast-counters (update (increase-tt-et minutes) slow-counters index)))
+                                       (else (advanced-serve out-customers (cdr requests) (update (increase-tt-et minutes) fast-counters index) slow-counters)))]
+        [x  (advanced-serve (advanced-pass-time-through-counter x out-customers (append fast-counters slow-counters)) (cdr requests) (map (nou-pass-time-through-counter x) fast-counters) (map (nou-pass-time-through-counter x) slow-counters))])))
 
+(define (nou-pass-time-through-counter minutes)
+  (λ (C)
+    (struct-copy counter C [index (counter-index C)]
+                           [tt (cond
+                                 ((>=  (- (counter-tt C) minutes) 0) (- (counter-tt C) minutes))
+                                 (else 0))]
+                           [et (new-et (counter-et C) (counter-queue C) minutes)]
+                           [queue (out-of-here (counter-et C) (counter-queue C) minutes)])))
+
+(define (new-et et queue minutes)
+   (cond
+    ((> (- et minutes) 0) (- et minutes))
+    ((= minutes 0) et)
+    ((= (- et minutes) 0) 0) 
+    ((queue-empty? queue) 0)  
+    ((not (queue-empty? (dequeue queue))) (new-et (cdr (top  (dequeue queue))) (dequeue queue) (- minutes et)))
+    (else 0)))
+
+(define (advanced-pass-time-through-counter minutes out-counters counters)
+  (cond
+    ((null? counters) out-counters)
+    (else (advanced-pass-time-through-counter minutes (new-out-counters (counter-et (car counters)) minutes (counter-queue (car counters)) out-counters (car counters)) (cdr counters))))) 
+
+(define (new-out-counters et minutes q out-counters C)
+  (cond
+    ((queue-empty? q) out-counters)
+    ((> (- et minutes) 0) out-counters)
+    (else (new-out-counters (cdr (top q)) (- minutes et) (dequeue q) (append out-counters (list (cons (counter-index C) (car (top q))))) C))))
+
+(define (out-of-here et queue minutes)
+  (cond
+    ((> (- et minutes) 0) queue)
+    ((queue-empty? queue) queue)
+    (else (out-of-here (cdr (top queue)) (dequeue queue) (- minutes et)))))
+   
 (define (find-counter counters index)
    (cond ((null? counters) null)
          ((= (counter-index (car counters)) index) (car counters))
@@ -175,18 +213,22 @@
    (if (null? counters) 0
          (+ (counter-tt (car counters)) (calculate-all-tt (cdr counters)))))
 
+
 (define C1 (empty-counter 1))
 (define C2 (empty-counter 2))
 (define C3 (empty-counter 3))
 (define C4 (empty-counter 4))
 (define C5 (make-counter 5 12 8 (queue '((remus . 6) (vivi . 4)) '() 2 0)))
 
+;(require racket/trace)
+;(trace advanced-serve)
 
-(serve '(2 (ana 14) 6)
-                     (list C1)
-                     (list C2 C3))
+(serve '((lia 5) 3 (ana 2) 2 (mia 6) (geo 4) 5)
+                     (list C1 C2)
+                     (list C3 C4))
 (list
-                                    '()
+                                    '((1 . lia) (2 . ana) (1 . geo))
                                     (counter 1 0 0 (queue '() '() 0 0))
-                                    (counter 2 8 8 (queue '() '((ana . 14)) 0 1))
-                                    (counter 3 0 0 (queue '() '() 0 0)))
+                                    (counter 2 0 0 (queue '() '() 0 0))
+                                    (counter 3 1 1 (queue '() '((mia . 6)) 0 1))
+                                    (counter 4 0 0 (queue '() '() 0 0)))
