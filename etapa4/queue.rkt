@@ -78,20 +78,26 @@
 (define (queue-empty? q)
   (and (equal? (queue-left q) empty-stream) (null? (queue-right q))))
 
-
 ; TODO
 ; Implementați funcția rotate, conform axiomelor de mai sus.
 ; Atenție: ce tip trebuie să aibă Acc?
 (define (rotate left right Acc)
-  'your-code-here)
+  (if (stream-empty? left)
+      (stream-cons (car right) Acc)
+      (stream-cons (stream-first left) (rotate (stream-rest left) (cdr right) (stream-cons (car right) Acc)))))
+
 
 ; TODO
 ; Implementați o funcție care adaugă un element la sfârșitul unei cozi.
 ; Veți întoarce coada actualizată.
 ; Atenție: în urma adăugării unui element, poate fi necesară o rotație!
 (define (enqueue x q)
-  'your-code-here)
-
+  (cond
+    ((>= (- (stream-length (queue-left q)) 1) (length (queue-right q)))
+       (struct-copy queue q [right (cons x (queue-right q))] [size-r (+ (queue-size-r q) 1)]))
+    ((and (null? (queue-right q)) (stream-empty? (queue-left q))) (struct-copy queue q [left (stream-cons x (queue-left q))] [size-l 1]))
+    (else (struct-copy queue q [left (rotate (queue-left q) (cons x (queue-right q)) empty-stream)] [right '()]
+                    [size-l (+ (+ (queue-size-l q) 1) (queue-size-r q))] [size-r 0]))))
 
 ; TODO
 ; Implementați o funcție care scoate primul element dintr-o coadă nevidă
@@ -99,7 +105,19 @@
 ; Veți întoarce coada actualizată.
 ; Atenție: în urma înlăturării unui element, poate fi necesară o rotație!
 (define (dequeue q)
-  'your-code-here)
+  (cond
+    ((and (not (stream-empty? (queue-left q)))
+          (> (stream-length (queue-left q)) (length (queue-right q))))
+               (struct-copy queue q  [left (stream-rest (queue-left q))] [size-l (- (queue-size-l q) 1)]))
+    ((and (null? (queue-right q)) (stream-empty? (queue-left q)))
+               (struct-copy queue q  [left (stream-rest (rotate (queue-left q) (queue-right q) empty-stream))] 
+                                                         [right '()]
+                                                         [size-l (- (queue-size-r q) 1)]
+                                                         [size-r 0]))
+    (else (struct-copy queue q  [left (rotate (stream-rest (queue-left q)) (queue-right q) empty-stream)] 
+                                                         [right '()]
+                                                         [size-l (- (+ (queue-size-l q) (queue-size-r q)) 1)]
+                                                         [size-r 0]))))
 
 
 ; TODO
@@ -107,4 +125,4 @@
 ; (nu verificați că e nevidă, pe coada vidă este firesc să dea eroare).
 ; Veți întoarce elementul aflat la începutul cozii.
 (define (top q)
-  'your-code-here)
+  (stream-first (queue-left q)))
